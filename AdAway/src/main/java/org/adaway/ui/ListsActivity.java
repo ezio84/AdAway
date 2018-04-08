@@ -34,12 +34,17 @@ import com.actionbarsherlock.view.MenuItem;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
+import android.widget.Toast;
+
 
 public class ListsActivity extends SherlockFragmentActivity {
     private FragmentActivity mActivity;
@@ -47,6 +52,12 @@ public class ListsActivity extends SherlockFragmentActivity {
     private ActionBar.Tab mTab1;
     private ActionBar.Tab mTab2;
     private ActionBar.Tab mTab3;
+
+    public static final int PERMISSION_REQUEST = 1;
+    private static final String[] PERMISSIONS = {
+        // READ_EXTERNAL_STORAGE is automatically granted within the write permission
+        android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+    };
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -81,10 +92,16 @@ public class ListsActivity extends SherlockFragmentActivity {
                 return true;
 
             case R.id.menu_import:
+                if (arePermissionsNeeded() && !hasPermissions()) {
+                    requestPermissions();
+                }
                 ImportExportHelper.openFileStream(mActivity);
                 return true;
 
             case R.id.menu_export:
+                if (arePermissionsNeeded() && !hasPermissions()) {
+                    requestPermissions();
+                }
                 ImportExportHelper.exportLists(mActivity);
                 return true;
 
@@ -202,6 +219,35 @@ public class ListsActivity extends SherlockFragmentActivity {
             }
 
             ft.commit();
+        }
+    }
+
+    private boolean arePermissionsNeeded() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.M;
+    }
+
+    private void requestPermissions() {
+        mActivity.requestPermissions(PERMISSIONS, PERMISSION_REQUEST);
+    }
+
+    private boolean hasPermissions() {
+        for (String permission : PERMISSIONS) {
+            if (mActivity.checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST) {
+            for (int grantResult : grantResults) {
+                if (grantResult != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(ListsActivity.this, getString(R.string.permissions_denied_alert), Toast.LENGTH_SHORT).show();
+                }
+            }
         }
     }
 
